@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Countdown</title>
+    <script src="https://unpkg.com/ical.js/dist/ical.min.js"></script>
+</head>
+<body>
+    <h1>Upcoming Events</h1>
+    <div id="event1">
+        <h2 id="event1-name"></h2>
+        <p id="event1-timer"></p>
+    </div>
+    <div id="event2">
+        <h2 id="event2-name"></h2>
+        <p id="event2-timer"></p>
+    </div>
+    <div id="event3">
+        <h2 id="event3-name"></h2>
+        <p id="event3-timer"></p>
+    </div>
+
+    <script>
+        async function getUpcomingEvents() {
+            const icalUrl = 'https://ics.ecal.com/ecal-sub/67d36e5aff724f00081c0b61/Formula%201.ics';
+            const response = await fetch(icalUrl);
+            const icalData = await response.text();
+            const jcalData = ICAL.parse(icalData);
+            const comp = new ICAL.Component(jcalData);
+            const events = comp.getAllSubcomponents('vevent').map(vevent => new ICAL.Event(vevent));
+            
+            const now = new Date();
+            return events.filter(event => event.startDate.toJSDate() > now)
+                         .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
+                         .slice(0, 3);
+        }
+
+        function startCountdown(event, elementId) {
+            const countDownDate = event.startDate.toJSDate().getTime();
+            
+            const x = setInterval(function() {
+                const now = new Date().getTime();
+                const distance = countDownDate - now;
+                if (distance < 0) {
+                    clearInterval(x);
+                    document.getElementById(elementId).innerHTML = 'Event Started';
+                    return;
+                }
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                document.getElementById(elementId).innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+            }, 1000);
+        }
+
+        (async () => {
+            const events = await getUpcomingEvents();
+            events.forEach((event, index) => {
+                document.getElementById(`event${index + 1}-name`).innerText = event.summary;
+                startCountdown(event, `event${index + 1}-timer`);
+            });
+        })();
+    </script>
+</body>
+</html>
