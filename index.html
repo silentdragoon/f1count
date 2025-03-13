@@ -8,6 +8,8 @@
 </head>
 <body>
     <h1>Upcoming Events</h1>
+    <input type="file" id="fileInput" accept=".ics">
+    <pre id="log"></pre>
     <div id="event1">
         <h2 id="event1-name"></h2>
         <p id="event1-timer"></p>
@@ -22,18 +24,47 @@
     </div>
 
     <script>
-        async function getUpcomingEvents() {
-            const icalUrl = 'Formula_1.ics';
-            const response = await fetch(icalUrl);
-            const icalData = await response.text();
-            const jcalData = ICAL.parse(icalData);
-            const comp = new ICAL.Component(jcalData);
-            const events = comp.getAllSubcomponents('vevent').map(vevent => new ICAL.Event(vevent));
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
             
-            const now = new Date();
-            return events.filter(event => event.startDate.toJSDate() > now)
-                         .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
-                         .slice(0, 3);
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                log('File loaded successfully');
+                processICalData(e.target.result);
+            };
+            reader.readAsText(file);
+        });
+
+        function log(message) {
+            document.getElementById('log').textContent += message + '\n';
+        }
+
+        function processICalData(icalData) {
+            try {
+                const jcalData = ICAL.parse(icalData);
+                const comp = new ICAL.Component(jcalData);
+                const events = comp.getAllSubcomponents('vevent').map(vevent => new ICAL.Event(vevent));
+                
+                const now = new Date();
+                const upcomingEvents = events.filter(event => event.startDate.toJSDate() > now)
+                                            .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
+                                            .slice(0, 3);
+                
+                if (upcomingEvents.length === 0) {
+                    log('No upcoming events found');
+                } else {
+                    log(`Found ${upcomingEvents.length} upcoming events`);
+                }
+
+                upcomingEvents.forEach((event, index) => {
+                    document.getElementById(`event${index + 1}-name`).innerText = event.summary;
+                    startCountdown(event, `event${index + 1}-timer`);
+                    log(`Event ${index + 1}: ${event.summary} at ${event.startDate.toJSDate()}`);
+                });
+            } catch (error) {
+                log('Error parsing iCal file: ' + error.message);
+            }
         }
 
         function startCountdown(event, elementId) {
@@ -54,14 +85,6 @@
                 document.getElementById(elementId).innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
             }, 1000);
         }
-
-        (async () => {
-            const events = await getUpcomingEvents();
-            events.forEach((event, index) => {
-                document.getElementById(`event${index + 1}-name`).innerText = event.summary;
-                startCountdown(event, `event${index + 1}-timer`);
-            });
-        })();
     </script>
 </body>
 </html>
