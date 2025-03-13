@@ -23,7 +23,7 @@
 
     <script>
         async function getUpcomingEvents() {
-            const icalUrl = 'https://ics.ecal.com/ecal-sub/67d36e5aff724f00081c0b61/Formula%201.ics';
+            const icalUrl = 'Formula_1.ics';
             const response = await fetch(icalUrl);
             const icalData = await response.text();
             const jcalData = ICAL.parse(icalData);
