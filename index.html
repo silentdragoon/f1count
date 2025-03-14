@@ -3,30 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Countdown</title>
-    <script src="https://unpkg.com/ical.js/dist/ical.min.js"></script>
+    <title>F1 Session Countdown</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        a {
+            color: hotpink;
+        }
+        .event-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .event {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
 <body>
-    <h1>Upcoming Events</h1>
-    <button id="fetchEvents">Load Events</button>
-    <pre id="log"></pre>
-    <div id="event1">
-        <h2 id="event1-name"></h2>
-        <p id="event1-timer"></p>
-    </div>
-    <div id="event2">
-        <h2 id="event2-name"></h2>
-        <p id="event2-timer"></p>
-    </div>
-    <div id="event3">
-        <h2 id="event3-name"></h2>
-        <p id="event3-timer"></p>
-    </div>
+    <h1>F1 Session Countdown</h1>
+    <div class="event-container" id="events"></div>
 
-    <script>
-        const ICAL_URL = 'https://ics.ecal.com/ecal-sub/67d3711e8e296d00087d1e0a/Formula%201.ics';
+    <script type="module">
+        import ICAL from 'https://unpkg.com/ical.js/dist/ical.min.js';
+        
+        const ICAL_URL = 'https://raw.githubusercontent.com/silentdragoon/f1count/refs/heads/main/Formula_1.ics';
 
-        document.getElementById('fetchEvents').addEventListener('click', async function() {
+        async function fetchEvents() {
             log('Fetching events...');
             try {
                 const response = await fetch(ICAL_URL);
@@ -37,7 +54,7 @@
             } catch (error) {
                 log('Error fetching iCal file: ' + error.message);
             }
-        });
+        }
 
         function log(message) {
             document.getElementById('log').textContent += message + '\n';
@@ -45,23 +62,27 @@
 
         function processICalData(icalData) {
             try {
-                const jcalData = ICAL.parse(icalData);
-                const comp = new ICAL.Component(jcalData);
+                const parsed = ICAL.parse(icalData);
+                const comp = new ICAL.Component(parsed);
                 const events = comp.getAllSubcomponents('vevent').map(vevent => new ICAL.Event(vevent));
                 
                 const now = new Date();
                 const upcomingEvents = events.filter(event => event.startDate.toJSDate() > now)
                                             .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
-                                            .slice(0, 3);
+                                            .slice(0, 5);
                 
                 if (upcomingEvents.length === 0) {
                     log('No upcoming events found');
                 } else {
                     log(`Found ${upcomingEvents.length} upcoming events`);
                 }
-
+                
+                document.getElementById('events').innerHTML = '';
                 upcomingEvents.forEach((event, index) => {
-                    document.getElementById(`event${index + 1}-name`).innerText = event.summary;
+                    const eventDiv = document.createElement('div');
+                    eventDiv.className = 'event';
+                    eventDiv.innerHTML = `<h2>${event.summary}</h2><p id='event${index + 1}-timer'></p>`;
+                    document.getElementById('events').appendChild(eventDiv);
                     startCountdown(event, `event${index + 1}-timer`);
                     log(`Event ${index + 1}: ${event.summary} at ${event.startDate.toJSDate()}`);
                 });
@@ -88,6 +109,10 @@
                 document.getElementById(elementId).innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
             }, 1000);
         }
+
+        fetchEvents();
     </script>
+    <pre>created by <a href="https://bsky.app/profile/wsjudd.bsky.social">@wsjudd</a></pre>
+    <pre id="log" style="display:none;"></pre>
 </body>
 </html>
