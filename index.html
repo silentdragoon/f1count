@@ -19,6 +19,9 @@
         a {
             color: hotpink;
         }
+        p {
+            font-size: larger;
+        }
         .event-container {
             display: flex;
             flex-direction: column;
@@ -82,7 +85,7 @@
                 upcomingEvents.forEach((event, index) => {
                     const eventDiv = document.createElement('div');
                     eventDiv.className = 'event';
-                    eventDiv.innerHTML = `<h2>${event.summary}</h2><p id='event${index + 1}-timer'></p>`;
+                    eventDiv.innerHTML = `<h3>${event.summary}</h3><p id='event${index + 1}-timer'></p>`;
                     document.getElementById('events').appendChild(eventDiv);
                     startCountdown(event, `event${index + 1}-timer`);
                     log(`Event ${index + 1}: ${event.summary} at ${event.startDate.toJSDate()}`);
