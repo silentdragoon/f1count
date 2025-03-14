@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Countdown meow</title>
+    <title>Event Countdown</title>
     <script src="https://unpkg.com/ical.js/dist/ical.min.js"></script>
 </head>
 <body>
     <h1>Upcoming Events</h1>
-    <input type="file" id="fileInput" accept=".ics">
+    <button id="fetchEvents">Load Events</button>
     <pre id="log"></pre>
     <div id="event1">
         <h2 id="event1-name"></h2>
@@ -24,16 +24,19 @@
     </div>
 
     <script>
-        document.getElementById('fileInput').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                log('File loaded successfully');
-                processICalData(e.target.result);
-            };
-            reader.readAsText(file);
+        const ICAL_URL = 'https://ics.ecal.com/ecal-sub/67d3711e8e296d00087d1e0a/Formula%201.ics';
+
+        document.getElementById('fetchEvents').addEventListener('click', async function() {
+            log('Fetching events...');
+            try {
+                const response = await fetch(ICAL_URL);
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                const icalData = await response.text();
+                log('Calendar data fetched successfully');
+                processICalData(icalData);
+            } catch (error) {
+                log('Error fetching iCal file: ' + error.message);
+            }
         });
 
         function log(message) {
