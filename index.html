@@ -43,44 +43,89 @@
         width: 100%;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         text-align: center;
-        color: #666;
+        color: #000;
+      }
+      .countdown {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        font-size: 2.5em;
+        font-weight: bold;
       }
       .countdown div {
         background: rgba(0, 0, 0, 0.4);
         color: #fff;
         padding: 15px;
         border-radius: 5px;
-        width: 80px; /* Set a fixed width */
-        height: 80px; /* Set a fixed height */
-        display: flex; /* Center the content */
+        width: 80px; /* Fixed width for uniformity */
+        height: 80px; /* Fixed height for uniformity */
+        display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        text-align: center;
       }
-
-      .countdown {
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        font-size: 2em; /* Adjusted slightly for balance */
-        font-weight: bold;
-      }
-
       .label {
         font-size: 0.5em;
         display: block;
         margin-top: 5px;
       }
-
       a {
         color: hotpink;
+      }
+      #settings-modal {
+        display: none; /* Hide modal by default */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      #settings-modal div {
+        background: #1e3c72;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        width: 300px;
+      }
+      #close-settings {
+        margin-top: 15px;
+        padding: 5px 10px;
+        background: hotpink;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
       }
     </style>
   </head>
   <body>
     <h1>🏁 F1 Session Countdown 🏁</h1>
-    <pre>No ads, few features. Created by <a href="https://bsky.app/profile/wsjudd.bsky.social">@wsjudd</a>.</pre>
+    <pre>No ads, few features. Created by <a href="https://bsky.app/profile/wsjudd.bsky.social">@wsjudd</a>. <span id="settings-icon" style="cursor: pointer;">⚙️</span></pre>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal">
+      <div>
+        <h2>Settings</h2>
+        <label for="numSessions">Number of upcoming sessions:</label>
+        <input
+          id="numSessions"
+          type="number"
+          value="5"
+          min="1"
+          max="50"
+          style="margin: 10px; padding: 5px; width: 80px"
+        />
+        <br />
+        <button id="close-settings">Close</button>
+      </div>
+    </div>
+
     <div id="loading" class="loading">Loading events...</div>
     <div class="event-container" id="events" style="display: none"></div>
 
@@ -89,6 +134,7 @@
 
       const ICAL_URL =
         "https://raw.githubusercontent.com/silentdragoon/f1count/refs/heads/main/Formula_1.ics";
+      let maxSessions = 5; // Default number of sessions
 
       async function fetchEvents() {
         try {
@@ -114,44 +160,39 @@
           const upcomingEvents = events
             .filter((event) => event.startDate.toJSDate() > now)
             .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
-            .slice(0, 10); // Display 10 events for testing
+            .slice(0, maxSessions);
 
-          const raceWeekends = {}; // To group and track race weekends
+          const raceWeekends = {};
           const darkPastelColors = [
-            "#b5e48c",
-            "#99d98c",
-            "#76c893",
-            "#52b69a",
-            "#34a0a4",
-            "#168aad",
-            "#1a759f",
-            "#1e6091",
-            "#184e77",
-          ]; // Dark pastel colours
+            "#F7B267",
+            "#F79D65",
+            "#F4845F",
+            "#F27059",
+            "#F25C54",
+          ];
 
           document.getElementById("loading").style.display = "none";
           document.getElementById("events").style.display = "flex";
           document.getElementById("events").innerHTML = "";
 
           upcomingEvents.forEach((event, index) => {
-            // Clean title: remove emoji and unnecessary info, then format
             const fullTitle = event.summary
               .replace(/FORMULA 1|2025/g, "")
               .trim();
             const cleanedTitle = toTitleCase(
               fullTitle.replace(/^[^\w]+/, "").trim()
-            ); // Remove leading emoji or symbols
-            const raceName = cleanedTitle.split("-")[0].trim(); // Extract race weekend name
+            );
+            const raceName = cleanedTitle.split("-")[0].trim();
 
             if (!raceWeekends[raceName]) {
               const colorIndex =
                 Object.keys(raceWeekends).length % darkPastelColors.length;
-              raceWeekends[raceName] = darkPastelColors[colorIndex]; // Assign a dark pastel colour in rotation
+              raceWeekends[raceName] = darkPastelColors[colorIndex];
             }
 
             const eventDiv = document.createElement("div");
             eventDiv.className = "event";
-            eventDiv.style.backgroundColor = raceWeekends[raceName]; // Apply the race weekend's colour
+            eventDiv.style.backgroundColor = raceWeekends[raceName];
 
             const eventDate = event.startDate.toJSDate();
             const localTime = eventDate.toLocaleString(undefined, {
@@ -165,10 +206,10 @@
             });
 
             eventDiv.innerHTML = `<h3>${cleanedTitle}</h3>
-                                 <p>${localTime}</p>
-                                 <div id='event${
-                                   index + 1
-                                 }-timer' class='countdown'></div>`;
+                                         <p>${localTime}</p>
+                                         <div id='event${
+                                           index + 1
+                                         }-timer' class='countdown'></div>`;
             document.getElementById("events").appendChild(eventDiv);
             startCountdown(event, `event${index + 1}-timer`);
           });
@@ -178,7 +219,37 @@
         }
       }
 
-      // Helper function to convert text to title case
+      document.addEventListener("DOMContentLoaded", () => {
+        const settingsModal = document.getElementById("settings-modal");
+        settingsModal.style.display = "none";
+      });
+
+      const settingsIcon = document.getElementById("settings-icon");
+      const settingsModal = document.getElementById("settings-modal");
+      const closeSettings = document.getElementById("close-settings");
+      const numSessionsInput = document.getElementById("numSessions");
+
+      // Open settings modal
+      settingsIcon.addEventListener("click", () => {
+        settingsModal.style.display = "flex";
+      });
+
+      // Close settings modal
+      closeSettings.addEventListener("click", () => {
+        settingsModal.style.display = "none";
+      });
+
+      // Update number of sessions dynamically
+      numSessionsInput.addEventListener("change", (e) => {
+        const newMax = parseInt(e.target.value, 10) || 5; // Corrected parseInt usage
+        if (newMax !== maxSessions) {
+          maxSessions = newMax;
+          fetchEvents(); // Reload events with the updated number
+        }
+      });
+
+      fetchEvents();
+
       function toTitleCase(text) {
         return text
           .toLowerCase()
@@ -221,8 +292,6 @@
         updateTimer();
         setInterval(updateTimer, 1000);
       }
-
-      fetchEvents();
     </script>
   </body>
 </html>
