@@ -54,6 +54,8 @@
         gap: 10px;
         font-size: 2.5em;
         font-weight: bold;
+        flex-wrap: wrap;
+        gap: 10px;
       }
       .countdown div {
         background: rgba(0, 0, 0, 0.4);
@@ -299,8 +301,8 @@
           element.innerHTML = `
                     <div>${days}<span class='label'>DAYS</span></div>
                     <div>${hours}<span class='label'>HOURS</span></div>
-                    <div>${minutes}<span class='label'>MINUTES</span></div>
-                    <div>${seconds}<span class='label'>SECONDS</span></div>`;
+                    <div>${minutes}<span class='label'>MINS</span></div>
+                    <div>${seconds}<span class='label'>SECS</span></div>`;
         }
 
         updateTimer();
