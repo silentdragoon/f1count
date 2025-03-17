@@ -24,6 +24,9 @@
       h1 {
         margin-bottom: 20px;
       }
+      .hidden {
+        display: none;
+      }
       .loading {
         font-size: 1.5em;
         font-weight: bold;
@@ -57,8 +60,8 @@
         color: #fff;
         padding: 15px;
         border-radius: 5px;
-        width: 80px; /* Fixed width for uniformity */
-        height: 80px; /* Fixed height for uniformity */
+        width: 80px;
+        height: 80px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -73,7 +76,7 @@
         color: hotpink;
       }
       #settings-modal {
-        display: none; /* Hide modal by default */
+        display: none;
         position: fixed;
         top: 0;
         left: 0;
@@ -81,7 +84,6 @@
         height: 100vh;
         background: rgba(0, 0, 0, 0.8);
         color: white;
-        display: flex;
         align-items: center;
         justify-content: center;
         z-index: 1000;
@@ -108,8 +110,8 @@
     <h1>🏁 F1 Session Countdown 🏁</h1>
     <pre>No ads, few features. Created by <a href="https://bsky.app/profile/wsjudd.bsky.social">@wsjudd</a>. <span id="settings-icon" style="cursor: pointer;">⚙️</span></pre>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal">
+    <!-- Updated Settings Modal -->
+    <div id="settings-modal" class="hidden">
       <div>
         <h2>Settings</h2>
         <label for="numSessions">Number of upcoming sessions:</label>
@@ -133,7 +135,7 @@
       import ICAL from "https://unpkg.com/ical.js/dist/ical.min.js";
 
       const ICAL_URL =
-        "Formula_1.ics";
+        "https://raw.githubusercontent.com/silentdragoon/f1count/refs/heads/main/Formula_1.ics";
       let maxSessions = 5; // Default number of sessions
 
       async function fetchEvents() {
@@ -219,36 +221,48 @@
         }
       }
 
+      // Adjusted JavaScript Logic
       document.addEventListener("DOMContentLoaded", () => {
         const settingsModal = document.getElementById("settings-modal");
-        settingsModal.style.display = "none";
+        const loadingMessage = document.getElementById("loading");
+
+        const settingsIcon = document.getElementById("settings-icon");
+        const closeSettings = document.getElementById("close-settings");
+        const numSessionsInput = document.getElementById("numSessions");
+
+        // Hide settings by default
+        settingsModal.classList.add("hidden");
+
+        // Open settings modal
+        settingsIcon.addEventListener("click", () => {
+          settingsModal.style.display = "flex";
+        });
+
+        // Close settings modal
+        closeSettings.addEventListener("click", () => {
+          settingsModal.style.display = "none";
+        });
+
+        // Update number of sessions dynamically
+        numSessionsInput.addEventListener("change", (e) => {
+          const newMax = parseInt(e.target.value, 10) || 5; // Corrected parseInt usage
+          if (newMax !== maxSessions) {
+            maxSessions = newMax;
+            fetchEvents(); // Reload events with the updated number
+          }
+        });
+
+        // Simulate loading events
+        fetchEvents()
+          .then(() => {
+            // Show settings modal after loading
+            settingsModal.classList.remove("hidden");
+          })
+          .catch((error) => {
+            console.error("Error loading events:", error);
+            loadingMessage.innerText = "Failed to load events.";
+          });
       });
-
-      const settingsIcon = document.getElementById("settings-icon");
-      const settingsModal = document.getElementById("settings-modal");
-      const closeSettings = document.getElementById("close-settings");
-      const numSessionsInput = document.getElementById("numSessions");
-
-      // Open settings modal
-      settingsIcon.addEventListener("click", () => {
-        settingsModal.style.display = "flex";
-      });
-
-      // Close settings modal
-      closeSettings.addEventListener("click", () => {
-        settingsModal.style.display = "none";
-      });
-
-      // Update number of sessions dynamically
-      numSessionsInput.addEventListener("change", (e) => {
-        const newMax = parseInt(e.target.value, 10) || 5; // Corrected parseInt usage
-        if (newMax !== maxSessions) {
-          maxSessions = newMax;
-          fetchEvents(); // Reload events with the updated number
-        }
-      });
-
-      fetchEvents();
 
       function toTitleCase(text) {
         return text
