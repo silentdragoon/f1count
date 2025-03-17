@@ -49,8 +49,8 @@
             font-weight: bold;
         }
         .countdown div {
-            background: #119DA4;
-            color: #AEECEF;
+            background: rgba(0, 0, 0, 0.4);
+            color: #fff;
             padding: 15px;
             border-radius: 5px;
             min-width: 60px;
@@ -61,10 +61,14 @@
             display: block;
             margin-top: 5px;
         }
+        a {
+            color: hotpink;
+        }
     </style>
 </head>
 <body>
     <h1>🏁 F1 Session Countdown 🏁</h1>
+    <pre>No ads, few features. Created by <a href="https://bsky.app/profile/wsjudd.bsky.social">@wsjudd</a>.</pre>
     <div id="loading" class="loading">Loading events...</div>
     <div class="event-container" id="events" style="display:none;"></div>
 
@@ -85,36 +89,60 @@
         }
 
         function processICalData(icalData) {
-            try {
-                const parsed = ICAL.parse(icalData);
-                const comp = new ICAL.Component(parsed);
-                const events = comp.getAllSubcomponents('vevent').map(vevent => new ICAL.Event(vevent));
-                
-                const now = new Date();
-                const upcomingEvents = events.filter(event => event.startDate.toJSDate() > now)
-                                            .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
-                                            .slice(0, 5);
-                
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('events').style.display = 'flex';
-                document.getElementById('events').innerHTML = '';
-                
-                upcomingEvents.forEach((event, index) => {
-                    const eventDiv = document.createElement('div');
-                    eventDiv.className = 'event';
-                    const eventDate = event.startDate.toJSDate();
-                    const localTime = eventDate.toLocaleString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
-                    
-                    eventDiv.innerHTML = `<h3>${event.summary}</h3>
-                                         <p>${localTime}</p>
-                                         <div id='event${index + 1}-timer' class='countdown'></div>`;
-                    document.getElementById('events').appendChild(eventDiv);
-                    startCountdown(event, `event${index + 1}-timer`);
-                });
-            } catch (error) {
-                document.getElementById('loading').innerText = 'Error processing events';
+    try {
+        const parsed = ICAL.parse(icalData);
+        const comp = new ICAL.Component(parsed);
+        const events = comp.getAllSubcomponents('vevent').map(vevent => new ICAL.Event(vevent));
+        
+        const now = new Date();
+        const upcomingEvents = events.filter(event => event.startDate.toJSDate() > now)
+                                    .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
+                                    .slice(0, 10); // Display 10 events for testing
+
+        const raceWeekends = {}; // To group and track race weekends
+        const darkPastelColors = ['#6A5ACD', '#708090', '#8B0000', '#4682B4', '#556B2F']; // Dark pastel colours
+        
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('events').style.display = 'flex';
+        document.getElementById('events').innerHTML = '';
+        
+        upcomingEvents.forEach((event, index) => {
+            // Clean title: remove emoji and unnecessary info, then format
+            const fullTitle = event.summary.replace(/FORMULA 1|2025/g, '').trim();
+            const cleanedTitle = toTitleCase(fullTitle.replace(/^[^\w]+/, '').trim()); // Remove leading emoji or symbols
+            const raceName = cleanedTitle.split('-')[0].trim(); // Extract race weekend name
+            
+            if (!raceWeekends[raceName]) {
+                const colorIndex = Object.keys(raceWeekends).length % darkPastelColors.length;
+                raceWeekends[raceName] = darkPastelColors[colorIndex]; // Assign a dark pastel colour in rotation
             }
-        }
+            
+            const eventDiv = document.createElement('div');
+            eventDiv.className = 'event';
+            eventDiv.style.backgroundColor = raceWeekends[raceName]; // Apply the race weekend's colour
+            
+            const eventDate = event.startDate.toJSDate();
+            const localTime = eventDate.toLocaleString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+            
+            eventDiv.innerHTML = `<h3>${cleanedTitle}</h3>
+                                 <p>${localTime}</p>
+                                 <div id='event${index + 1}-timer' class='countdown'></div>`;
+            document.getElementById('events').appendChild(eventDiv);
+            startCountdown(event, `event${index + 1}-timer`);
+        });
+    } catch (error) {
+        document.getElementById('loading').innerText = 'Error processing events';
+    }
+}
+
+// Helper function to convert text to title case
+function toTitleCase(text) {
+    return text.toLowerCase()
+               .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+
+
 
         function startCountdown(event, elementId) {
             const countDownDate = event.startDate.toJSDate().getTime();
