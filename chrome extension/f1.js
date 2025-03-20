@@ -172,8 +172,8 @@ function startCountdown(event, elementId) {
     element.innerHTML = `
       <div>${formatTimeUnit(days, "DAY")}</div>
       <div>${formatTimeUnit(hours, "HOUR")}</div>
-      <div>${formatTimeUnit(minutes, "MINUTE")}</div>
-      ${showSeconds ? `<div>${formatTimeUnit(seconds, "SECOND")}</div>` : ""}`;
+      <div>${formatTimeUnit(minutes, "MIN")}</div>
+      ${showSeconds ? `<div>${formatTimeUnit(seconds, "SEC")}</div>` : ""}`;
 
     updateTimerDisplay(); // Ensure layout updates after each refresh
   }
