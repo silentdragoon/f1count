@@ -17,6 +17,7 @@ h3 {
 }
 .smol {
   font-size: small;
+  margin-bottom: 5px;
 }
 .hidden {
   display: none;
