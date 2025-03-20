@@ -5,7 +5,7 @@ console.log("ICAL.js loaded successfully!", ICAL);
 const ICAL_URL =
   "https://raw.githubusercontent.com/silentdragoon/f1count/refs/heads/main/Formula_1.ics";
   let maxSessions = parseInt(localStorage.getItem("maxSessions"), 10) || 5; // Default to 5 if no value exists
-let showSeconds = localStorage.getItem("showSeconds") === "true"; // Load saved setting
+let showSeconds = localStorage.getItem("showSeconds") !== "false"; // Load saved setting
 
 async function fetchEvents() {
   try {
