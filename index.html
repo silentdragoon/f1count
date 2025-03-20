@@ -1,7 +1,3 @@
-<!-- This Source Code Form is subject to the terms of the Mozilla Public
-   - License, v. 2.0. If a copy of the MPL was not distributed with this
-   - file, You can obtain one at https://mozilla.org/MPL/2.0/. -->
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -12,117 +8,12 @@
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%221em%22 font-size=%2280%22>🏁</text></svg>"
     />
     <title>F1 Session Countdown</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background: #1e3c72;
-        color: white;
-        text-align: center;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-      }
-      h1 {
-        margin-bottom: 20px;
-      }
-      .hidden {
-        display: none;
-      }
-      .loading {
-        font-size: 1.5em;
-        font-weight: bold;
-      }
-      .event-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-        max-width: 600px;
-      }
-      .event {
-        background: rgba(255, 255, 255, 0.2);
-        padding: 20px;
-        border-radius: 10px;
-        margin: 15px 0;
-        width: 100%;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        color: #000;
-      }
-      .countdown {
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        font-size: 2.5em;
-        font-weight: bold;
-        flex-wrap: wrap;
-      }
-      .countdown div {
-        background: rgba(0, 0, 0, 0.4);
-        color: #fff;
-        padding: 15px;
-        border-radius: 5px;
-        width: 80px;
-        height: 80px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        flex: 0 0 calc(25%-10px);
-        aspect-ratio: 1;
-      }
-      @media (max-width: 660px) {
-        .countdown div {
-          flex: 1 0 25%;
-        }
-      }
-      .label {
-        font-size: 0.5em;
-        display: block;
-        margin-top: 5px;
-      }
-      a {
-        color: hotpink;
-      }
-      #settings-modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-      }
-      #settings-modal div {
-        background: #1e3c72;
-        padding: 20px;
-        border-radius: 10px;
-        text-align: center;
-        width: 300px;
-      }
-      #close-settings {
-        margin-top: 15px;
-        padding: 5px 10px;
-        background: hotpink;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-    </style>
+    <link rel="stylesheet" href="style.css">
   </head>
   <body>
-    <h1>🏁 F1 Session Countdown</h1>
+    <h3>🏁 F1 Session Countdown 🏁</h3>
     <pre>No ads, few features. Created by <a href="https://bsky.app/profile/wsjudd.bsky.social">@wsjudd</a>. <span id="settings-icon" style="cursor: pointer;">⚙️</span></pre>
 
-    <!-- Updated Settings Modal -->
     <div id="settings-modal" class="hidden">
       <div>
         <h2>Settings</h2>
@@ -136,6 +27,11 @@
           style="margin: 10px; padding: 5px; width: 80px"
         />
         <br />
+        <label for="showSeconds">
+          <input id="showSeconds" type="checkbox" checked />
+          Show Seconds in Countdown
+        </label>
+        <br />        
         <button id="close-settings">Close</button>
       </div>
     </div>
@@ -143,181 +39,8 @@
     <div id="loading" class="loading">Loading events...</div>
     <div class="event-container" id="events" style="display: none"></div>
 
-    <script type="module">
-      import ICAL from "https://unpkg.com/ical.js/dist/ical.min.js";
+    <script src="ical.min.js"></script>
+    <script src="f1.js"></script>
 
-      const ICAL_URL =
-        "https://raw.githubusercontent.com/silentdragoon/f1count/refs/heads/main/Formula_1.ics";
-      let maxSessions = 5; // Default number of sessions
-
-      async function fetchEvents() {
-        try {
-          const response = await fetch(ICAL_URL, { cache: "no-cache" });
-          if (!response.ok)
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          const icalData = await response.text();
-          requestAnimationFrame(() => processICalData(icalData));
-        } catch (error) {
-          document.getElementById("loading").innerText = "Error loading events";
-        }
-      }
-
-      function processICalData(icalData) {
-        try {
-          const parsed = ICAL.parse(icalData);
-          const comp = new ICAL.Component(parsed);
-          const events = comp
-            .getAllSubcomponents("vevent")
-            .map((vevent) => new ICAL.Event(vevent));
-
-          const now = new Date();
-          const upcomingEvents = events
-            .filter((event) => event.startDate.toJSDate() > now)
-            .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
-            .slice(0, maxSessions);
-
-          const raceWeekends = {};
-          const darkPastelColors = [
-            "#F7B267",
-            "#F79D65",
-            "#F4845F",
-            "#F27059",
-            "#F25C54",
-          ];
-
-          document.getElementById("loading").style.display = "none";
-          document.getElementById("events").style.display = "flex";
-          document.getElementById("events").innerHTML = "";
-
-          upcomingEvents.forEach((event, index) => {
-            const fullTitle = event.summary
-              .replace(/FORMULA 1|2025/g, "")
-              .trim();
-            const cleanedTitle = toTitleCase(
-              fullTitle.replace(/^[^\w]+/, "").trim()
-            );
-            const raceName = cleanedTitle.split("-")[0].trim();
-
-            if (!raceWeekends[raceName]) {
-              const colorIndex =
-                Object.keys(raceWeekends).length % darkPastelColors.length;
-              raceWeekends[raceName] = darkPastelColors[colorIndex];
-            }
-
-            const eventDiv = document.createElement("div");
-            eventDiv.className = "event";
-            eventDiv.style.backgroundColor = raceWeekends[raceName];
-
-            const eventDate = event.startDate.toJSDate();
-            const localTime = eventDate.toLocaleString(undefined, {
-              weekday: "short",
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              timeZoneName: "short",
-            });
-
-            eventDiv.innerHTML = `<h3>${cleanedTitle}</h3>
-                                         <p>${localTime}</p>
-                                         <div id='event${
-                                           index + 1
-                                         }-timer' class='countdown'></div>`;
-            document.getElementById("events").appendChild(eventDiv);
-            startCountdown(event, `event${index + 1}-timer`);
-          });
-        } catch (error) {
-          document.getElementById("loading").innerText =
-            "Error processing events";
-        }
-      }
-
-      // Adjusted JavaScript Logic
-      document.addEventListener("DOMContentLoaded", () => {
-        const settingsModal = document.getElementById("settings-modal");
-        const loadingMessage = document.getElementById("loading");
-
-        const settingsIcon = document.getElementById("settings-icon");
-        const closeSettings = document.getElementById("close-settings");
-        const numSessionsInput = document.getElementById("numSessions");
-
-        // Hide settings by default
-        settingsModal.classList.add("hidden");
-
-        // Open settings modal
-        settingsIcon.addEventListener("click", () => {
-          settingsModal.style.display = "flex";
-        });
-
-        // Close settings modal
-        closeSettings.addEventListener("click", () => {
-          settingsModal.style.display = "none";
-        });
-
-        // Update number of sessions dynamically
-        numSessionsInput.addEventListener("change", (e) => {
-          const newMax = parseInt(e.target.value, 10) || 5; // Corrected parseInt usage
-          if (newMax !== maxSessions) {
-            maxSessions = newMax;
-            fetchEvents(); // Reload events with the updated number
-          }
-        });
-
-        // Simulate loading events
-        fetchEvents()
-          .then(() => {
-            // Show settings modal after loading
-            settingsModal.classList.remove("hidden");
-          })
-          .catch((error) => {
-            console.error("Error loading events:", error);
-            loadingMessage.innerText = "Failed to load events.";
-          });
-      });
-
-      function toTitleCase(text) {
-        return text
-          .toLowerCase()
-          .replace(/\b\w/g, (char) => char.toUpperCase());
-      }
-
-      function startCountdown(event, elementId) {
-        const countDownDate = event.startDate.toJSDate().getTime();
-
-        function updateTimer() {
-          const now = new Date().getTime();
-          const distance = countDownDate - now;
-          const element = document.getElementById(elementId);
-
-          if (distance < 0) {
-            element.innerHTML = "Event Started";
-            return;
-          }
-
-          const days = String(
-            Math.floor(distance / (1000 * 60 * 60 * 24))
-          ).padStart(2, "0");
-          const hours = String(
-            Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-          ).padStart(2, "0");
-          const minutes = String(
-            Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))
-          ).padStart(2, "0");
-          const seconds = String(
-            Math.floor((distance % (1000 * 60)) / 1000)
-          ).padStart(2, "0");
-
-          element.innerHTML = `
-                    <div>${days}<span class='label'>DAYS</span></div>
-                    <div>${hours}<span class='label'>HOURS</span></div>
-                    <div>${minutes}<span class='label'>MINS</span></div>
-                    <div>${seconds}<span class='label'>SECS</span></div>`;
-        }
-
-        updateTimer();
-        setInterval(updateTimer, 1000);
-      }
-    </script>
   </body>
 </html>
