@@ -1,0 +1,105 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #1e3c72;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 600px;
+  min-width: 300px;
+  overflow: hidden;
+}
+h1 {
+  margin-bottom: 20px;
+}
+.hidden {
+  display: none;
+}
+.loading {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+.event-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+}
+.event {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 20px;
+  border-radius: 10px;
+  margin: 15px 0;
+  width: 100%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  color: #000;
+}
+.countdown {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  font-size: 3em;
+  font-weight: bold;
+  flex-wrap: wrap;
+}
+.countdown div {
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  padding: 15px;
+  border-radius: 5px;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex: 0 0 calc(25%-10px);
+  aspect-ratio: 1;
+}
+@media (max-width: 660px) {
+  .countdown div {
+    flex: 1 0 25%;
+  }
+}
+.label {
+  font-size: 0.5em;
+  display: block;
+  margin-top: 5px;
+}
+a {
+  color: hotpink;
+}
+#settings-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+#settings-modal div {
+  background: #1e3c72;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  width: 300px;
+}
+#close-settings {
+  margin-top: 15px;
+  padding: 5px 10px;
+  background: hotpink;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}

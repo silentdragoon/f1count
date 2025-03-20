@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%221em%22 font-size=%2280%22>🏁</text></svg>"
+    />
+    <title>F1 Session Countdown</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <p><strong>🏁 F1 Session Countdown 🏁</strong></p>
+    <pre>No ads, few features. Created by <a href="https://bsky.app/profile/wsjudd.bsky.social">@wsjudd</a>. <span id="settings-icon" style="cursor: pointer;">⚙️</span></pre>
+
+    <div id="settings-modal" class="hidden">
+      <div>
+        <h2>Settings</h2>
+        <label for="numSessions">Number of upcoming sessions:</label>
+        <input
+          id="numSessions"
+          type="number"
+          value="5"
+          min="1"
+          max="50"
+          style="margin: 10px; padding: 5px; width: 80px"
+        />
+        <br />
+        <button id="close-settings">Close</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading">Loading events...</div>
+    <div class="event-container" id="events" style="display: none"></div>
+
+    <script src="ical.min.js"></script>
+    <script src="f1.js"></script>
+
+  </body>
+</html>
