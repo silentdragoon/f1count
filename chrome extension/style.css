@@ -10,9 +10,8 @@ body {
   justify-content: center;
   min-height: 600px;
   min-width: 300px;
-  overflow: hidden;
 }
-h1 {
+h3 {
   margin-bottom: 20px;
 }
 .hidden {
@@ -58,12 +57,12 @@ h1 {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  flex: 0 0 calc(25%-10px);
+  flex: 0 0 calc(25%-15px);
   aspect-ratio: 1;
 }
 @media (max-width: 660px) {
   .countdown div {
-    flex: 1 0 25%;
+    flex: 1 0 33%;
   }
 }
 .label {
