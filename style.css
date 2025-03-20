@@ -11,6 +11,9 @@ body {
   min-height: 600px;
   min-width: 300px;
 }
+.smol {
+  font-size: small;
+}
 h3 {
   margin-bottom: 10px;
   font-size: 1.5em;
