@@ -33,7 +33,7 @@ function processICalData(icalData) {
       .slice(0, maxSessions);
 
     const raceWeekends = {};
-    const Colours = ["#F7B267", "#F79D65", "#F4845F", "#F27059", "#F25C54"];
+    const colours = ["#D9ED92", "#B5E48C", "#99D98C", "#76C893", "#52B69A"];
 
     document.getElementById("loading").style.display = "none";
     document.getElementById("events").style.display = "flex";
@@ -45,8 +45,8 @@ function processICalData(icalData) {
       const raceName = cleanedTitle.split("-")[0].trim();
 
       if (!raceWeekends[raceName]) {
-        const colorIndex = Object.keys(raceWeekends).length % Colours.length;
-        raceWeekends[raceName] = Colours[colorIndex];
+        const colorIndex = Object.keys(raceWeekends).length % colours.length;
+        raceWeekends[raceName] = colours[colorIndex];
       }
 
       const eventDiv = document.createElement("div");
