@@ -3,57 +3,131 @@
 console.log("ICAL.js loaded successfully!", ICAL);
 
 const ICAL_URL =
-  "https://raw.githubusercontent.com/silentdragoon/f1count/refs/heads/main/Formula_1.ics";
-  let maxSessions = parseInt(localStorage.getItem("maxSessions"), 10) || 5; // Default to 5 if no value exists
-let showSeconds = localStorage.getItem("showSeconds") !== "false"; // Load saved setting
+  "https://raw.githubusercontent.com/silentdragoon/f1count/refs/heads/main/f1.ics";
+const F2_URL =
+  "https://raw.githubusercontent.com/silentdragoon/f1count/refs/heads/main/f2.ics";
+const F3_URL =
+  "https://raw.githubusercontent.com/silentdragoon/f1count/refs/heads/main/f3.ics";
+const activeTimers = {}; // Store intervals by event ID
+
+let maxSessions = parseInt(localStorage.getItem("maxSessions"), 10) || 5; //
+let showSeconds = localStorage.getItem("showSeconds") !== "false";
+let showF1 = localStorage.getItem("showF1") !== "false"; // Default to true
+let showF2 = localStorage.getItem("showF2") === "true"; // Default to false
+let showF3 = localStorage.getItem("showF3") === "true"; // Default to false;
+
+function clearAllTimers() {
+  Object.keys(activeTimers).forEach((timerId) => {
+    clearInterval(activeTimers[timerId]);
+    delete activeTimers[timerId];
+  });
+}
 
 async function fetchEvents() {
+  clearAllTimers(); // Stop any existing timers
   try {
-    const response = await fetch(ICAL_URL, { cache: "no-cache" });
-    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-    const icalData = await response.text();
-    requestAnimationFrame(() => processICalData(icalData));
+    const urls = [];
+    if (showF1) urls.push(ICAL_URL);
+    if (showF2) urls.push(F2_URL);
+    if (showF3) urls.push(F3_URL);
+
+    const eventPromises = urls.map((url) =>
+      fetch(url, { cache: "no-cache" }).then((response) => {
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        return response.text();
+      })
+    );
+
+    const icalDataArray = await Promise.all(eventPromises);
+
+    // Combine events from all calendars
+    const allEvents = icalDataArray.flatMap((icalData) => {
+      const parsed = ICAL.parse(icalData);
+      const comp = new ICAL.Component(parsed);
+      return comp
+        .getAllSubcomponents("vevent")
+        .map((vevent) => new ICAL.Event(vevent));
+    });
+
+    requestAnimationFrame(() => processICalData(allEvents));
   } catch (error) {
     document.getElementById("loading").innerText = "Error loading events";
   }
 }
 
-function processICalData(icalData) {
-  try {
-    const parsed = ICAL.parse(icalData);
-    const comp = new ICAL.Component(parsed);
-    const events = comp
-      .getAllSubcomponents("vevent")
-      .map((vevent) => new ICAL.Event(vevent));
+// Function to clean and format event titles
+function formatEventTitle(originalTitle) {
+  let title = originalTitle;
 
+  // Replace "Grand Prix" (without parentheses) with "Race"
+  title = title.replace(/\bGrand Prix\b(?![^\(]*\))/g, "Race");
+
+  // Hide "F1: " prefix if F2 and F3 are both disabled
+  if (!showF2 && !showF3 && title.startsWith("F1: ")) {
+    title = title.replace("F1: ", "");
+  }
+
+  // Replace "(" with " - "
+  title = title.replace("(", " - ");
+
+  // Replace "Grand Prix)" with "GP)"
+  title = title.replace(")", "");
+
+  // Add " GP)" if the event is from F2 or F3 and ends with ")"
+  if (title.includes("F2:") || title.includes("F3:")) {
+    title = title.replace(/\)$/, " GP)");
+  }
+
+  // Replace "FP1" with "Free Practice 1", "FP2" with "Free Practice 2", etc.
+  /* title = title
+    .replace(/\bFP1\b/, "Free Practice 1")
+    .replace(/\bFP2\b/, "Free Practice 2")
+    .replace(/\bFP3\b/, "Free Practice 3");
+  */
+
+  return title;
+}
+
+function processICalData(allEvents) {
+  try {
     const now = new Date();
-    const upcomingEvents = events
+
+    const upcomingEvents = allEvents
       .filter((event) => event.startDate.toJSDate() > now)
       .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
       .slice(0, maxSessions);
 
-    const raceWeekends = {};
     const colours = ["#D9ED92", "#B5E48C", "#99D98C", "#76C893", "#52B69A"];
+    let lastSessionTime = null;
+    let currentColourIndex = 0;
 
     document.getElementById("loading").style.display = "none";
     document.getElementById("events").style.display = "flex";
     document.getElementById("events").innerHTML = "";
 
     upcomingEvents.forEach((event, index) => {
-      const fullTitle = event.summary.replace(/FORMULA 1|2025/g, "").trim();
-      const cleanedTitle = toTitleCase(fullTitle.replace(/^[^\w]+/, "").trim());
-      const raceName = cleanedTitle.split("-")[0].trim();
+      const eventDate = event.startDate.toJSDate();
 
-      if (!raceWeekends[raceName]) {
-        const colorIndex = Object.keys(raceWeekends).length % colours.length;
-        raceWeekends[raceName] = colours[colorIndex];
+      if (
+        lastSessionTime &&
+        (eventDate.getTime() - lastSessionTime.getTime()) / (1000 * 60 * 60) >=
+          96
+      ) {
+        currentColourIndex = (currentColourIndex + 1) % colours.length;
       }
+      lastSessionTime = eventDate;
+
+      const fullTitle = formatEventTitle(
+        event.summary.replace(/2025/g, "").trim()
+      );
+      const cleanedTitle = fullTitle.replace(/^[^\w]+/, "").trim();
+      const raceName = cleanedTitle.split("-")[0].trim();
 
       const eventDiv = document.createElement("div");
       eventDiv.className = "event";
-      eventDiv.style.backgroundColor = raceWeekends[raceName];
+      eventDiv.style.backgroundColor = colours[currentColourIndex];
 
-      const eventDate = event.startDate.toJSDate();
       const localTime = eventDate.toLocaleString(undefined, {
         weekday: "short",
         year: "numeric",
@@ -66,12 +140,15 @@ function processICalData(icalData) {
 
       eventDiv.innerHTML = `<h3>${cleanedTitle}</h3>
                             <p>${localTime}</p>
-                            <div id='event${index + 1}-timer' class='countdown'></div>`;
+                            <div id='event${
+                              index + 1
+                            }-timer' class='countdown'></div>`;
       document.getElementById("events").appendChild(eventDiv);
+
       startCountdown(event, `event${index + 1}-timer`);
     });
 
-    updateTimerDisplay(); // Ensure correct layout when events load
+    updateTimerDisplay();
   } catch (error) {
     document.getElementById("loading").innerText = "Error processing events";
   }
@@ -84,6 +161,33 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeSettings = document.getElementById("close-settings");
   const numSessionsInput = document.getElementById("numSessions");
   const showSecondsInput = document.getElementById("showSeconds");
+
+  const showF1Input = document.getElementById("showF1");
+  const showF2Input = document.getElementById("showF2");
+  const showF3Input = document.getElementById("showF3");
+
+  // Set initial states
+  showF1Input.checked = showF1;
+  showF2Input.checked = showF2;
+  showF3Input.checked = showF3;
+
+  showF1Input.addEventListener("change", (e) => {
+    showF1 = e.target.checked;
+    localStorage.setItem("showF1", showF1);
+    fetchEvents(); // Reload events with updated preferences
+  });
+
+  showF2Input.addEventListener("change", (e) => {
+    showF2 = e.target.checked;
+    localStorage.setItem("showF2", showF2);
+    fetchEvents(); // Reload events with updated preferences
+  });
+
+  showF3Input.addEventListener("change", (e) => {
+    showF3 = e.target.checked;
+    localStorage.setItem("showF3", showF3);
+    fetchEvents(); // Reload events with updated preferences
+  });
 
   // Set initial checkbox state
   showSecondsInput.checked = showSeconds;
@@ -98,18 +202,16 @@ document.addEventListener("DOMContentLoaded", () => {
     settingsModal.style.display = "none";
   });
 
-// Handle "Number of Sessions" setting
-numSessionsInput.value = maxSessions; // Set initial value
-numSessionsInput.addEventListener("change", (e) => {
-  const newMax = parseInt(e.target.value, 10) || 5;
-  if (newMax !== maxSessions) {
-    maxSessions = newMax;
-    localStorage.setItem("maxSessions", maxSessions); // Save to localStorage
-    fetchEvents(); // Reload events
-  }
-});
-
-  
+  // Handle "Number of Sessions" setting
+  numSessionsInput.value = maxSessions; // Set initial value
+  numSessionsInput.addEventListener("change", (e) => {
+    const newMax = parseInt(e.target.value, 10) || 5;
+    if (newMax !== maxSessions) {
+      maxSessions = newMax;
+      localStorage.setItem("maxSessions", maxSessions); // Save to localStorage
+      fetchEvents(); // Reload events
+    }
+  });
 
   // Handle "Show Seconds" setting
   showSecondsInput.addEventListener("change", (e) => {
@@ -149,9 +251,17 @@ function updateTimerDisplay() {
 function startCountdown(event, elementId) {
   const countDownDate = event.startDate.toJSDate().getTime();
 
+  // Clear any existing interval for this timer
+  if (activeTimers[elementId]) {
+    clearInterval(activeTimers[elementId]);
+    delete activeTimers[elementId];
+  }
+
   function formatTimeUnit(value, unit) {
     const paddedValue = String(value).padStart(2, "0");
-    return `${paddedValue}<span class='label'>${unit}${value === 1 ? "" : "S"}</span>`;
+    return `${paddedValue}<span class='label'>${unit}${
+      value === 1 ? "" : "S"
+    }</span>`;
   }
 
   function updateTimer() {
@@ -159,13 +269,19 @@ function startCountdown(event, elementId) {
     const distance = countDownDate - now;
     const element = document.getElementById(elementId);
 
+    if (!element) return; // Timer element may no longer exist
+
     if (distance < 0) {
       element.innerHTML = "Event Started";
+      clearInterval(activeTimers[elementId]); // Stop the timer
+      delete activeTimers[elementId];
       return;
     }
 
     const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const hours = Math.floor(
+      (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+    );
     const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
@@ -178,8 +294,9 @@ function startCountdown(event, elementId) {
     updateTimerDisplay(); // Ensure layout updates after each refresh
   }
 
-  updateTimer();
-  setInterval(updateTimer, 1000);
+  // Start a new interval and save its reference
+  activeTimers[elementId] = setInterval(updateTimer, 1000);
+  updateTimer(); // Run immediately
 }
 
 // Utility function

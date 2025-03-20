@@ -1,6 +1,6 @@
 body {
   font-family: "Helvetica Now Display", Helvetica, Arial, sans-serif;
-  background: #184E77;
+  background: #184e77;
   color: white;
   text-align: center;
   padding: 10px;
@@ -12,7 +12,8 @@ body {
   min-width: 300px;
 }
 h3 {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  font-size: 1.5em;
 }
 .hidden {
   display: none;
@@ -66,7 +67,7 @@ h3 {
     padding: 10px;
   }
   .event {
-     padding: 15px; 
+    padding: 15px;
   }
 }
 .label {
@@ -90,9 +91,8 @@ h3 {
   text-align: center;
 }
 
-
 a {
-  color: hotpink;
+  color: #ff69b4;
 }
 #settings-modal {
   display: none;
