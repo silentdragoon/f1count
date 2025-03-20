@@ -71,6 +71,23 @@ h1 {
   display: block;
   margin-top: 5px;
 }
+
+.countdown.three-columns {
+  display: flex;
+  flex-wrap: nowrap; /* Prevents wrapping */
+  justify-content: center; /* Centers the items */
+  align-items: center; /* Keeps them aligned */
+  gap: 10px; /* Adjust spacing */
+}
+
+.countdown.three-columns div {
+  flex: 1 1 30%; /* Each box takes up ~30% of the space */
+  min-width: 80px; /* Prevents the boxes from shrinking too much */
+  max-width: 120px; /* Prevents excessive growth */
+  text-align: center;
+}
+
+
 a {
   color: hotpink;
 }

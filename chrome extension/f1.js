@@ -4,7 +4,8 @@ console.log("ICAL.js loaded successfully!", ICAL);
 
 const ICAL_URL =
   "https://raw.githubusercontent.com/silentdragoon/f1count/refs/heads/main/Formula_1.ics";
-let maxSessions = 5; // Default number of sessions
+  let maxSessions = parseInt(localStorage.getItem("maxSessions"), 10) || 5; // Default to 5 if no value exists
+let showSeconds = localStorage.getItem("showSeconds") === "true"; // Load saved setting
 
 async function fetchEvents() {
   try {
@@ -64,29 +65,28 @@ function processICalData(icalData) {
       });
 
       eventDiv.innerHTML = `<h3>${cleanedTitle}</h3>
-                                         <p>${localTime}</p>
-                                         <div id='event${
-                                           index + 1
-                                         }-timer' class='countdown'></div>`;
+                            <p>${localTime}</p>
+                            <div id='event${index + 1}-timer' class='countdown'></div>`;
       document.getElementById("events").appendChild(eventDiv);
       startCountdown(event, `event${index + 1}-timer`);
     });
+
+    updateTimerDisplay(); // Ensure correct layout when events load
   } catch (error) {
     document.getElementById("loading").innerText = "Error processing events";
   }
 }
 
-// Adjusted JavaScript Logic
+// Handle settings & UI events
 document.addEventListener("DOMContentLoaded", () => {
   const settingsModal = document.getElementById("settings-modal");
-  const loadingMessage = document.getElementById("loading");
-
   const settingsIcon = document.getElementById("settings-icon");
   const closeSettings = document.getElementById("close-settings");
   const numSessionsInput = document.getElementById("numSessions");
+  const showSecondsInput = document.getElementById("showSeconds");
 
-  // Hide settings by default
-  settingsModal.classList.add("hidden");
+  // Set initial checkbox state
+  showSecondsInput.checked = showSeconds;
 
   // Open settings modal
   settingsIcon.addEventListener("click", () => {
@@ -98,39 +98,60 @@ document.addEventListener("DOMContentLoaded", () => {
     settingsModal.style.display = "none";
   });
 
-  // Update number of sessions dynamically
-  numSessionsInput.addEventListener("change", (e) => {
-    const newMax = parseInt(e.target.value, 10) || 5; // Corrected parseInt usage
-    if (newMax !== maxSessions) {
-      maxSessions = newMax;
-      fetchEvents(); // Reload events with the updated number
-    }
-  });
-
-  // Simulate loading events
-  fetchEvents()
-    .then(() => {
-      // Show settings modal after loading
-      settingsModal.classList.remove("hidden");
-    })
-    .catch((error) => {
-      console.error("Error loading events:", error);
-      loadingMessage.innerText = "Failed to load events.";
-    });
+// Handle "Number of Sessions" setting
+numSessionsInput.value = maxSessions; // Set initial value
+numSessionsInput.addEventListener("change", (e) => {
+  const newMax = parseInt(e.target.value, 10) || 5;
+  if (newMax !== maxSessions) {
+    maxSessions = newMax;
+    localStorage.setItem("maxSessions", maxSessions); // Save to localStorage
+    fetchEvents(); // Reload events
+  }
 });
 
-function toTitleCase(text) {
-  return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+  
+
+  // Handle "Show Seconds" setting
+  showSecondsInput.addEventListener("change", (e) => {
+    showSeconds = e.target.checked;
+    localStorage.setItem("showSeconds", showSeconds);
+    updateTimerDisplay(); // Update layout immediately
+  });
+
+  // Load events & update display on startup
+  fetchEvents();
+});
+
+// Utility function to apply the correct countdown layout
+function updateTimerDisplay() {
+  console.log("Updating timer display. showSeconds =", showSeconds);
+
+  document.querySelectorAll(".countdown").forEach((timerDiv) => {
+    // Show/hide seconds
+    timerDiv.querySelectorAll("div").forEach((unit) => {
+      if (unit.innerText.includes("SECOND")) {
+        unit.style.display = showSeconds ? "flex" : "none";
+      }
+    });
+
+    // Apply three-column layout when seconds are hidden
+    if (!showSeconds) {
+      console.log("Applying three-columns class");
+      timerDiv.classList.add("three-columns");
+    } else {
+      console.log("Removing three-columns class");
+      timerDiv.classList.remove("three-columns");
+    }
+  });
 }
 
+// Countdown function
 function startCountdown(event, elementId) {
   const countDownDate = event.startDate.toJSDate().getTime();
 
   function formatTimeUnit(value, unit) {
     const paddedValue = String(value).padStart(2, "0");
-    return `${paddedValue}<span class='label'>${unit}${
-      value === 1 ? "" : "S"
-    }</span>`;
+    return `${paddedValue}<span class='label'>${unit}${value === 1 ? "" : "S"}</span>`;
   }
 
   function updateTimer() {
@@ -144,19 +165,24 @@ function startCountdown(event, elementId) {
     }
 
     const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-    const hours = Math.floor(
-      (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-    );
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
     element.innerHTML = `
-          <div>${formatTimeUnit(days, "DAY")}</div>
-          <div>${formatTimeUnit(hours, "HOUR")}</div>
-          <div>${formatTimeUnit(minutes, "MINUTE")}</div>
-          <div>${formatTimeUnit(seconds, "SECOND")}</div>`;
+      <div>${formatTimeUnit(days, "DAY")}</div>
+      <div>${formatTimeUnit(hours, "HOUR")}</div>
+      <div>${formatTimeUnit(minutes, "MINUTE")}</div>
+      ${showSeconds ? `<div>${formatTimeUnit(seconds, "SECOND")}</div>` : ""}`;
+
+    updateTimerDisplay(); // Ensure layout updates after each refresh
   }
 
   updateTimer();
   setInterval(updateTimer, 1000);
+}
+
+// Utility function
+function toTitleCase(text) {
+  return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 }
