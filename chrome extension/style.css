@@ -1,5 +1,5 @@
 body {
-  font-family: Arial, sans-serif;
+  font-family: "Helvetica Now Display", Helvetica, Arial, sans-serif;
   background: #1e3c72;
   color: white;
   text-align: center;
@@ -63,7 +63,10 @@ h3 {
 @media (max-width: 660px) {
   .countdown div {
     flex: 1 0 33%;
-    padding: 5px;
+    padding: 10px;
+  }
+  .event {
+     padding: 15px; 
   }
 }
 .label {
