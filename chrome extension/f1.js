@@ -91,7 +91,7 @@ function formatEventTitle(originalTitle) {
   return title;
 }
 
-function processICalData(allEvents) {
+function processICalData(allEvents, showFantasyWarning) {
   try {
       const now = new Date();
       const upcomingEvents = allEvents
@@ -146,19 +146,22 @@ function processICalData(allEvents) {
                                  <div id='event${index + 1}-timer' class='countdown'></div>`;
 
           // Display Fantasy lock warning for the first applicable session of the weekend
+          
           if (
-              showF1 && // Check if it's an F1 session
-              !raceWeekendTracker[raceName] && // Show warning only if not already shown for this race weekend
-              (cleanedTitle.includes("Sprint") || cleanedTitle.includes("Qualifying")) &&
-              !cleanedTitle.includes("Sprint Qualifying")
-          ) {
-              const lockDiv = document.createElement("div");
-              lockDiv.className = "fantasy-lock";
-              lockDiv.innerHTML = `<p>⚠️ F1 Fantasy team lock ⚠️</p>`;
-
-              eventDiv.appendChild(lockDiv); // Add Fantasy lock box above the countdown
-              raceWeekendTracker[raceName] = true; // Mark warning as shown for this race weekend
-          }
+            showFantasyWarning === true && // Only show the warning if explicitly enabled
+            event.source === "F1" && // Only for F1 sessions
+            !raceWeekendTracker[raceName] && // Not already shown for the race weekend
+            (cleanedTitle.includes("Sprint") || cleanedTitle.includes("Qualifying")) &&
+            !cleanedTitle.includes("Sprint Qualifying")
+        ) {
+            const lockDiv = document.createElement("div");
+            lockDiv.className = "fantasy-lock";
+            lockDiv.innerHTML = `<p>⚠️ F1 Fantasy team lock ⚠️</p>`;
+        
+            eventDiv.appendChild(lockDiv); // Add Fantasy lock box above the countdown
+            raceWeekendTracker[raceName] = true; // Mark warning as shown for this race weekend
+        }
+        
 
           eventDiv.innerHTML += countdownHtml;
 
@@ -179,6 +182,7 @@ function processICalData(allEvents) {
 
 
 
+
 // Handle settings & UI events
 document.addEventListener("DOMContentLoaded", () => {
   const settingsModal = document.getElementById("settings-modal");
@@ -190,28 +194,33 @@ document.addEventListener("DOMContentLoaded", () => {
   const showF1Input = document.getElementById("showF1");
   const showF2Input = document.getElementById("showF2");
   const showF3Input = document.getElementById("showF3");
-
+  
   const fantasyWarningToggle = document.getElementById("fantasy-warning-toggle");
 
-    // Load saved preference for Fantasy lock warning
+    // Fetch the Fantasy warning preference
     chrome.storage.sync.get("fantasyWarningEnabled", (data) => {
-        const isEnabled = data.fantasyWarningEnabled ?? true; // Default to true
-        fantasyWarningToggle.checked = isEnabled;
+      const showFantasyWarning = data.fantasyWarningEnabled ?? true; // Default to true
+      fetchEvents().then((events) => {
+          processICalData(events, showFantasyWarning);
+      });
+  });
+  
+
+  fantasyWarningToggle.addEventListener("change", () => {
+    const fantasyWarningEnabled = fantasyWarningToggle.checked;
+
+    // Save the updated setting
+    chrome.storage.sync.set({ fantasyWarningEnabled }, () => {
+        console.log(`Fantasy warning preference set to: ${fantasyWarningEnabled}`);
     });
 
-    // Save preference when toggled
-    fantasyWarningToggle.addEventListener("change", () => {
-        const fantasyWarningEnabled = fantasyWarningToggle.checked;
-        chrome.storage.sync.set({ fantasyWarningEnabled }, () => {
-            console.log(`Fantasy warning preference set to: ${fantasyWarningEnabled}`);
-        });
-
-        // Optionally reload events to reflect the new preference immediately
-        fetchEvents().then((events) => {
-            document.getElementById("events").innerHTML = ""; // Clear events
-            processICalData(events); // Re-process events with updated settings
-        });
+    // Clear the current events and refresh the display
+    fetchEvents().then((events) => {
+        document.getElementById("events").innerHTML = ""; // Clear the event container
+        processICalData(events, fantasyWarningEnabled); // Reprocess with the updated setting
     });
+});
+
 
   // Set initial states
   showF1Input.checked = showF1;
