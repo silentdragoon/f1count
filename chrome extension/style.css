@@ -95,11 +95,20 @@ h3 {
   text-align: center;
 }
 
+.fantasy-warning {
+  background-color: rgba(0,0,0,0.2);
+  border: 0.5px solid #184e77;
+  padding: 10px;
+}
+
 a {
   color: #ff69b4;
 }
+#settings-icon {
+  pointer-events: auto;
+}
 #settings-modal {
-  display: none;
+
   position: fixed;
   top: 0;
   left: 0;
@@ -110,6 +119,7 @@ a {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+    transition: opacity 0.3s ease;
 }
 #settings-modal div {
   background: #1e3c72;

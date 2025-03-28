@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "F1 Session Countdown",
-  "version": "1.1",
   "description": "Displays F1 session countdown as a pop-up.",
+  "version": "1.2",
   "icons": {
     "16": "icon16.png",
     "32": "icon32.png",
@@ -13,11 +13,15 @@
     "default_popup": "index.html",
     "default_title": "F1 Countdown"
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "notifications", "alarms"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "web_accessible_resources": [
     {
-      "resources": ["ical.min.js", "f1.js"],
+      "resources": ["ical.min.js", "f1.js", "options.js"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "options_page": "options.html"
 }
