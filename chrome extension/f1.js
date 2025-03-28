@@ -103,67 +103,68 @@ function processICalData(allEvents) {
       let lastSessionTime = null;
       let currentColourIndex = 0;
 
-      chrome.storage.sync.get("fantasyWarningEnabled", (data) => {
-          const showFantasyWarning = data.fantasyWarningEnabled ?? true; // Default to true
+      const raceWeekendTracker = {}; // Track warnings by race weekend
 
-          document.getElementById("loading").style.display = "none";
-          document.getElementById("events").style.display = "flex";
-          document.getElementById("events").innerHTML = "";
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("events").style.display = "flex";
+      document.getElementById("events").innerHTML = "";
 
-          upcomingEvents.forEach((event, index) => {
-              const eventDate = event.startDate.toJSDate();
+      upcomingEvents.forEach((event, index) => {
+          const eventDate = event.startDate.toJSDate();
 
-              if (
-                  lastSessionTime &&
-                  (eventDate.getTime() - lastSessionTime.getTime()) / (1000 * 60 * 60) >= 96
-              ) {
-                  currentColourIndex = (currentColourIndex + 1) % colours.length;
-              }
-              lastSessionTime = eventDate;
+          if (
+              lastSessionTime &&
+              (eventDate.getTime() - lastSessionTime.getTime()) / (1000 * 60 * 60) >= 96
+          ) {
+              currentColourIndex = (currentColourIndex + 1) % colours.length;
+          }
+          lastSessionTime = eventDate;
 
-              const fullTitle = formatEventTitle(
-                  event.summary.replace(/2025/g, "").trim()
-              );
-              const cleanedTitle = fullTitle.replace(/^[^\w]+/, "").trim();
+          const fullTitle = formatEventTitle(
+              event.summary.replace(/2025/g, "").trim()
+          );
+          const cleanedTitle = fullTitle.replace(/^[^\w]+/, "").trim();
 
-              const eventDiv = document.createElement("div");
-              eventDiv.className = "event";
-              eventDiv.style.backgroundColor = colours[currentColourIndex];
+          const raceName = cleanedTitle.split("-")[0].trim(); // Extract race name
 
-              const localTime = eventDate.toLocaleString(undefined, {
-                  weekday: "short",
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  timeZoneName: "short",
-              });
+          const eventDiv = document.createElement("div");
+          eventDiv.className = "event";
+          eventDiv.style.backgroundColor = colours[currentColourIndex];
 
-              const countdownHtml = `<h3>${cleanedTitle}</h3>
-                                     <p>${localTime}</p>
-                                     <div id='event${index + 1}-timer' class='countdown'></div>`;
-
-              // Display Fantasy lock warning only if enabled and applicable
-              if (
-                  showFantasyWarning && // Check user preference
-                  event.source === "F1" && // Only apply to F1 sessions
-                  (cleanedTitle.includes("Sprint") || cleanedTitle.includes("Qualifying")) &&
-                  !cleanedTitle.includes("Sprint Qualifying")
-              ) {
-                  const lockDiv = document.createElement("div");
-                  lockDiv.className = "fantasy-lock";
-                  lockDiv.innerHTML = `<p>⚠️ F1 Fantasy team lock ⚠️</p>`;
-
-                  eventDiv.appendChild(lockDiv); // Add Fantasy lock box above countdown
-              }
-
-              eventDiv.innerHTML += countdownHtml;
-
-              document.getElementById("events").appendChild(eventDiv);
-
-              startCountdown(event, `event${index + 1}-timer`);
+          const localTime = eventDate.toLocaleString(undefined, {
+              weekday: "short",
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZoneName: "short",
           });
+
+          const countdownHtml = `<h3>${cleanedTitle}</h3>
+                                 <p>${localTime}</p>
+                                 <div id='event${index + 1}-timer' class='countdown'></div>`;
+
+          // Display Fantasy lock warning for the first applicable session of the weekend
+          if (
+              showF1 && // Check if it's an F1 session
+              !raceWeekendTracker[raceName] && // Show warning only if not already shown for this race weekend
+              (cleanedTitle.includes("Sprint") || cleanedTitle.includes("Qualifying")) &&
+              !cleanedTitle.includes("Sprint Qualifying")
+          ) {
+              const lockDiv = document.createElement("div");
+              lockDiv.className = "fantasy-lock";
+              lockDiv.innerHTML = `<p>⚠️ F1 Fantasy team lock ⚠️</p>`;
+
+              eventDiv.appendChild(lockDiv); // Add Fantasy lock box above the countdown
+              raceWeekendTracker[raceName] = true; // Mark warning as shown for this race weekend
+          }
+
+          eventDiv.innerHTML += countdownHtml;
+
+          document.getElementById("events").appendChild(eventDiv);
+
+          startCountdown(event, `event${index + 1}-timer`);
       });
 
       return upcomingEvents; // Ensure upcomingEvents is returned
@@ -173,6 +174,7 @@ function processICalData(allEvents) {
       return [];
   }
 }
+
 
 
 
