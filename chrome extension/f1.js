@@ -24,37 +24,39 @@ function clearAllTimers() {
 }
 
 async function fetchEvents() {
-  clearAllTimers(); // Stop any existing timers
+  clearAllTimers();
   try {
-    const urls = [];
-    if (showF1) urls.push(ICAL_URL);
-    if (showF2) urls.push(F2_URL);
-    if (showF3) urls.push(F3_URL);
+      const urls = [];
+      if (showF1) urls.push({ url: ICAL_URL, source: "F1" });
+      if (showF2) urls.push({ url: F2_URL, source: "F2" });
+      if (showF3) urls.push({ url: F3_URL, source: "F3" });
 
-    const eventPromises = urls.map((url) =>
-      fetch(url, { cache: "no-cache" }).then((response) => {
-        if (!response.ok)
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        return response.text();
-      })
-    );
+      const eventPromises = urls.map((item) =>
+          fetch(item.url, { cache: "no-cache" }).then((response) => {
+              if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+              return response.text().then((icalData) => ({ icalData, source: item.source }));
+          })
+      );
 
-    const icalDataArray = await Promise.all(eventPromises);
+      const icalDataArray = await Promise.all(eventPromises);
 
-    // Combine events from all calendars
-    const allEvents = icalDataArray.flatMap((icalData) => {
-      const parsed = ICAL.parse(icalData);
-      const comp = new ICAL.Component(parsed);
-      return comp
-        .getAllSubcomponents("vevent")
-        .map((vevent) => new ICAL.Event(vevent));
-    });
+      const allEvents = icalDataArray.flatMap(({ icalData, source }) => {
+          const parsed = ICAL.parse(icalData);
+          const comp = new ICAL.Component(parsed);
+          return comp.getAllSubcomponents("vevent").map((vevent) => {
+              const event = new ICAL.Event(vevent);
+              event.source = source; // Tag the event with its source
+              return event;
+          });
+      });
 
-    requestAnimationFrame(() => processICalData(allEvents));
+      return processICalData(allEvents); // Pass tagged events to the processing function
   } catch (error) {
-    document.getElementById("loading").innerText = "Error loading events";
+      document.getElementById("loading").innerText = "Error loading events";
+      return [];
   }
 }
+
 
 // Function to clean and format event titles
 function formatEventTitle(originalTitle) {
@@ -91,68 +93,89 @@ function formatEventTitle(originalTitle) {
 
 function processICalData(allEvents) {
   try {
-    const now = new Date();
+      const now = new Date();
+      const upcomingEvents = allEvents
+          .filter((event) => event.startDate.toJSDate() > now)
+          .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
+          .slice(0, maxSessions);
 
-    const upcomingEvents = allEvents
-      .filter((event) => event.startDate.toJSDate() > now)
-      .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
-      .slice(0, maxSessions);
+      const colours = ["#D9ED92", "#B5E48C", "#99D98C", "#76C893", "#52B69A"];
+      let lastSessionTime = null;
+      let currentColourIndex = 0;
 
-    const colours = ["#D9ED92", "#B5E48C", "#99D98C", "#76C893", "#52B69A"];
-    let lastSessionTime = null;
-    let currentColourIndex = 0;
+      chrome.storage.sync.get("fantasyWarningEnabled", (data) => {
+          const showFantasyWarning = data.fantasyWarningEnabled ?? true; // Default to true
 
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("events").style.display = "flex";
-    document.getElementById("events").innerHTML = "";
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("events").style.display = "flex";
+          document.getElementById("events").innerHTML = "";
 
-    upcomingEvents.forEach((event, index) => {
-      const eventDate = event.startDate.toJSDate();
+          upcomingEvents.forEach((event, index) => {
+              const eventDate = event.startDate.toJSDate();
 
-      if (
-        lastSessionTime &&
-        (eventDate.getTime() - lastSessionTime.getTime()) / (1000 * 60 * 60) >=
-          96
-      ) {
-        currentColourIndex = (currentColourIndex + 1) % colours.length;
-      }
-      lastSessionTime = eventDate;
+              if (
+                  lastSessionTime &&
+                  (eventDate.getTime() - lastSessionTime.getTime()) / (1000 * 60 * 60) >= 96
+              ) {
+                  currentColourIndex = (currentColourIndex + 1) % colours.length;
+              }
+              lastSessionTime = eventDate;
 
-      const fullTitle = formatEventTitle(
-        event.summary.replace(/2025/g, "").trim()
-      );
-      const cleanedTitle = fullTitle.replace(/^[^\w]+/, "").trim();
-      const raceName = cleanedTitle.split("-")[0].trim();
+              const fullTitle = formatEventTitle(
+                  event.summary.replace(/2025/g, "").trim()
+              );
+              const cleanedTitle = fullTitle.replace(/^[^\w]+/, "").trim();
 
-      const eventDiv = document.createElement("div");
-      eventDiv.className = "event";
-      eventDiv.style.backgroundColor = colours[currentColourIndex];
+              const eventDiv = document.createElement("div");
+              eventDiv.className = "event";
+              eventDiv.style.backgroundColor = colours[currentColourIndex];
 
-      const localTime = eventDate.toLocaleString(undefined, {
-        weekday: "short",
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZoneName: "short",
+              const localTime = eventDate.toLocaleString(undefined, {
+                  weekday: "short",
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  timeZoneName: "short",
+              });
+
+              const countdownHtml = `<h3>${cleanedTitle}</h3>
+                                     <p>${localTime}</p>
+                                     <div id='event${index + 1}-timer' class='countdown'></div>`;
+
+              // Display Fantasy lock warning only if enabled and applicable
+              if (
+                  showFantasyWarning && // Check user preference
+                  event.source === "F1" && // Only apply to F1 sessions
+                  (cleanedTitle.includes("Sprint") || cleanedTitle.includes("Qualifying")) &&
+                  !cleanedTitle.includes("Sprint Qualifying")
+              ) {
+                  const lockDiv = document.createElement("div");
+                  lockDiv.className = "fantasy-lock";
+                  lockDiv.innerHTML = `<h4>⚠️ F1 Fantasy team lock ⚠️</h4>`;
+
+                  eventDiv.appendChild(lockDiv); // Add Fantasy lock box above countdown
+              }
+
+              eventDiv.innerHTML += countdownHtml;
+
+              document.getElementById("events").appendChild(eventDiv);
+
+              startCountdown(event, `event${index + 1}-timer`);
+          });
       });
 
-      eventDiv.innerHTML = `<h3>${cleanedTitle}</h3>
-                            <p>${localTime}</p>
-                            <div id='event${
-                              index + 1
-                            }-timer' class='countdown'></div>`;
-      document.getElementById("events").appendChild(eventDiv);
-
-      startCountdown(event, `event${index + 1}-timer`);
-    });
-
-    updateTimerDisplay();
+      return upcomingEvents; // Ensure upcomingEvents is returned
   } catch (error) {
-    document.getElementById("loading").innerText = "Error processing events";
+      console.error("Error processing events:", error);
+      document.getElementById("loading").innerText = "Error processing events";
+      return [];
   }
 }
+
+
+
 
 // Handle settings & UI events
 document.addEventListener("DOMContentLoaded", () => {
@@ -165,6 +188,28 @@ document.addEventListener("DOMContentLoaded", () => {
   const showF1Input = document.getElementById("showF1");
   const showF2Input = document.getElementById("showF2");
   const showF3Input = document.getElementById("showF3");
+
+  const fantasyWarningToggle = document.getElementById("fantasy-warning-toggle");
+
+    // Load saved preference for Fantasy lock warning
+    chrome.storage.sync.get("fantasyWarningEnabled", (data) => {
+        const isEnabled = data.fantasyWarningEnabled ?? true; // Default to true
+        fantasyWarningToggle.checked = isEnabled;
+    });
+
+    // Save preference when toggled
+    fantasyWarningToggle.addEventListener("change", () => {
+        const fantasyWarningEnabled = fantasyWarningToggle.checked;
+        chrome.storage.sync.set({ fantasyWarningEnabled }, () => {
+            console.log(`Fantasy warning preference set to: ${fantasyWarningEnabled}`);
+        });
+
+        // Optionally reload events to reflect the new preference immediately
+        fetchEvents().then((events) => {
+            document.getElementById("events").innerHTML = ""; // Clear events
+            processICalData(events); // Re-process events with updated settings
+        });
+    });
 
   // Set initial states
   showF1Input.checked = showF1;
