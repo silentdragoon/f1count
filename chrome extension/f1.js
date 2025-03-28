@@ -153,7 +153,7 @@ function processICalData(allEvents) {
               ) {
                   const lockDiv = document.createElement("div");
                   lockDiv.className = "fantasy-lock";
-                  lockDiv.innerHTML = `<h4>⚠️ F1 Fantasy team lock ⚠️</h4>`;
+                  lockDiv.innerHTML = `<p>⚠️ F1 Fantasy team lock ⚠️</p>`;
 
                   eventDiv.appendChild(lockDiv); // Add Fantasy lock box above countdown
               }
